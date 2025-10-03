@@ -5,11 +5,14 @@ library(readr)
 plant_key <- read_csv("Botanical Key.csv")
 
 four_west <- read_csv("4-Sided_West.csv")
-
 four_east <- read_csv("4-Sided_East.csv")
 
-#four_east_mod <- four_east
-#four_west_mod <- four_west
+control_west <- read_csv("Control_West.csv")
+control_east <- read_csv("Control_East.csv")
+
+two_west <- read_csv("2-Sided_West.csv")
+two_east <- read_csv("2-Sided_East.csv")
+
 
 library(purrr)
 library(glue)
@@ -21,7 +24,11 @@ library(ggplot2)
 library(RColorBrewer)
 
 
-########### generalized functions
+####drafting
+##need a function that would modify occular cover and get it to 100% each category
+
+
+########### named functions
 ##1: ocular cover
 convert_ocular <- function(x) {
   x[x == 1] <- ((0 + 5)/2)/100
@@ -30,31 +37,31 @@ convert_ocular <- function(x) {
   x[x == 4] <- ((50 + 75)/2)/100
   x[x == 5] <- ((75 + 95)/2)/100
   x[x == 6] <- ((95 + 100)/2)/100
-  print(x)
+  return(x)
 }
-
 
 cover_avgs <- function(df_east, df_west) {
   ocular_cols = 5:9
   east_converted_cover <- lmap(df_east[,ocular_cols], convert_ocular)
   west_converted_cover <- lmap(df_west[,ocular_cols], convert_ocular)
-  #dont love that lmap prints each list, may want to change
+  
   inside_rows = 11:20 
   outside_rows = 1:10
   
-  e_inside_avg <- map(east_converted_cover[inside_rows,], \(x) mean(x))
-  e_outside_avg <- map(east_converted_cover[outside_rows,], \(x) mean(x))
-  w_inside_avg <- map(west_converted_cover[inside_rows,], \(x) mean(x))
-  w_outside_avg <- map(west_converted_cover[outside_rows,], \(x) mean(x))
+  e_inside_avg <- map(east_converted_cover[inside_rows,], \(x) round(mean(x), 3))
+  e_outside_avg <- map(east_converted_cover[outside_rows,], \(x) round(mean(x), 3))
+  w_inside_avg <- map(west_converted_cover[inside_rows,], \(x) round(mean(x), 3))
+  w_outside_avg <- map(west_converted_cover[outside_rows,], \(x) round(mean(x), 3))
   tot_inside_avg <- apply(rbind(east_converted_cover[inside_rows,], 
-                                west_converted_cover[inside_rows,]), 2, mean)
+                                west_converted_cover[inside_rows,]), 2, mean) %>% round(3)
   tot_outside_avg <- apply(rbind(east_converted_cover[outside_rows,], 
-                                 west_converted_cover[outside_rows,]), 2, mean)
+                                 west_converted_cover[outside_rows,]), 2, mean) %>% round(3)
   
   four_sided_avgs <- rbind(e_inside_avg, w_inside_avg, e_outside_avg, 
                            w_outside_avg, tot_inside_avg, tot_outside_avg)
   return(four_sided_avgs)
 }
+#new_df <- this function
 
 
 ##2: ggplots
@@ -84,11 +91,10 @@ listing_spp <- function(df_side, row_range) {
   input_list <- list()
   for (r in row_range){
   df_val_list <- list()
-  for (c in 10:(ncol(df_side))) {#could probably use tidyselect for columns
+  for (c in 10:(ncol(df_side))) {
     if (typeof(df_side[[r,c]]) == "character" && !is.na(df_side[r,c])) {
       if (nchar(df_side[r,c]) > 1) {
         spp <- df_side[r,c]
-        #print(spp)
         pl_key <- keying_code(spp)
         #print(glue("{spp} is {pl_key}"))
         brow <- df_side[r, (c+1)]
@@ -104,7 +110,6 @@ listing_spp <- function(df_side, row_range) {
   }
   return(bind_rows(input_list))
 }
-#new_df <- this function
 
 
 ##5: returns dataframes of the same treatment (east and west combined but
@@ -156,11 +161,6 @@ species_richness <- function(spp_df, code_list = list("F", "G", "W", "O")){
 }
 
 
-####% each species contributes to richness (so % of total count of each spp. ie which
-##species are dominant in which category)
-##############??? : do the duplicates count as independent categories in this? or
-##are they disregarded here too?
-
 ##7: % invasive
 keying_invasive <- function(df_richness) {
   invasives_df <- filter(plant_key, Invasive == 1)
@@ -184,7 +184,7 @@ keying_invasive <- function(df_richness) {
 invasive_percents <- function(df_richness) {
   df_invasives <- keying_invasive(df_richness)
   df_plant_sums <- df_richness %>% group_by(Key) %>% summarise(Tot_Count = sum(n))
-  df_counts <- inner_join(df_invasives, df_plant_sums) %>% 
+  df_counts <- inner_join(df_invasives, df_plant_sums, by = "Key") %>% 
     mutate(Prop_Invasive = round((Invasive_Count / Tot_Count), 3))
   return(df_counts)
 } 
@@ -192,12 +192,12 @@ invasive_percents <- function(df_richness) {
 
 
 
-##7/8: evaluating browse (OUTSIDE ONLY, assuming no browsed inside). only evaluates browse
+##8: evaluating browse (OUTSIDE ONLY, assuming no browsed inside). only evaluates browse
 ##if 5 or more individuals in the species 
+#####could combine this with inside and outside
 percent_browse_outside <- function(treatment_listing_df, treatment_richness_counts) {
   treatment_counts_wf <- treatment_richness_counts %>% 
     filter((Key == "W" | Key == "F") & (n >= 5))
-  # print(treatment_counts_wf) has both browsed and unbrowsed but has counts
   min_spp <- treatment_counts_wf$Species
   df_to_eval <- list() #df with sp, H, brow, individuals with n >= 5
   for (s in min_spp) {
@@ -207,7 +207,8 @@ percent_browse_outside <- function(treatment_listing_df, treatment_richness_coun
   } ##i feel like this could be more efficient
   
   summarise_browse <- df_to_eval %>% group_by(Browse, Species) %>% 
-    summarise(AvgHeight = mean(Height, na.rm = TRUE), Count = n())
+    summarise(AvgHeight = mean(Height, na.rm = TRUE), Count = n(), 
+              .groups = "keep")
   
   for (sp in min_spp) {
     df <- summarise_browse %>% filter(Browse == 1)
@@ -215,9 +216,8 @@ percent_browse_outside <- function(treatment_listing_df, treatment_richness_coun
     cc <- df[str_which(df$Species, sp), n]
     c <- treatment_counts_wf[str_which(treatment_counts_wf$Species, sp), (n - 1)]
     if (nrow(cc) > 0) {
-      percent <- ((cc/c)*100)
-      rounded_percent <- round(percent, 4)
-      print(glue("{sp}: {rounded_percent}% browsed"))
+      percent <- round(((cc/c)*100), 1)
+      print(glue("{sp}: {percent}% browsed"))
     }
     else {
       print(glue("{sp} has no browsed individuals"))
@@ -225,25 +225,6 @@ percent_browse_outside <- function(treatment_listing_df, treatment_richness_coun
   }
   return(summarise_browse)
 }
-
-
-##function for just unbrowse and browse HEIGHTS. does not filter for count >= 5 or woodies 
-avg_browse_height <- function(df_with_Height_Brow, filt_treatment_counts, browse = FALSE){
-  if (browse == FALSE) {
-    filt_brow <- filter(df_with_Height_Brow, Browse == 0)
-    unbrowsed_df <- avg_spp_heights(filt_treatment_counts, filt_brow, TRUE)
-    colnames(unbrowsed_df) <- c("Species", "Avg Unbrowsed Height (cm)")
-    return(unbrowsed_df)
-  }
-  if (browse == TRUE) {#means wanna evaluate browse
-    filt_brow <- filter(df_with_Height_Brow, Browse == 1)
-    browsed_df <- avg_spp_heights(filt_treatment_counts, filt_brow, TRUE)
-    colnames(browsed_df) <- c("Species", "Avg Browsed Height (cm)")
-    return(browsed_df)
-  }
-}
-#####this should filter for n >= 5, idk why it doesnt. dont even need this function
-
 
 
 
@@ -264,7 +245,7 @@ avg_spp_heights <- function(treatment_count, treatment_df, evaluate_browse = FAL
     if (evaluate_browse == FALSE) {
       na_height_count <- sum(is.na(spp_df$Height))
       if ((spp_count - na_height_count) < 5) {
-        print(glue("ran if, count is {spp_count - na_height_count}"))
+        #print(glue("ran if, count is {spp_count - na_height_count}"))
         next
         }
     }
@@ -284,3 +265,30 @@ avg_inside_heights <- function(treatment_richness_count, treatment_listing_df){
   return(df_over_5_woodies)
 }
 #df_avg_spp_heights <- this function
+
+
+
+##10: main functions all combined so it doesn't return a million different dfs
+total_analysis <- function(df_east, df_west){
+  inside <- unite_treatment(df_east, df_west, TRUE)
+  outside <- unite_treatment(df_east, df_west, FALSE)
+  
+  print("Inside: Species Richness")
+  inside_richness <- species_richness(inside)
+  print("Outside: Species Richness")
+  outside_richness <- species_richness(outside)
+  
+  inside_invasives <- invasive_percents(inside_richness)
+  print("Inside: Count and Proportion of Invasive Species")
+  print(inside_invasives)
+  outside_invasives <- invasive_percents(outside_richness)
+  print("Outside: Count and Proportion of Invasive Species")
+  print(outside_invasives)
+  
+  heights_inside <- avg_inside_heights(inside_richness, inside)
+  print("Inside: Woody Average Heights")
+  print(heights_inside, na.print = "NA", n = Inf)
+  print("Outside: Counts of Woody and Forb Browse and Average Heights")
+  browse_outside <- percent_browse_outside(outside, outside_richness)
+  print(browse_outside, na.print = "NA", n = Inf)
+}
