@@ -151,7 +151,7 @@ unite_treatment <- function(df_east, df_west, inside = TRUE) {
 ##or all categories as a print statement, accounting for duplicates. 
 ##creates df of all spp (including dupes and unks) and counts
 species_richness <- function(spp_df, code_list = list("F", "G", "W", "O"), 
-                             quiet = TRUE){ 
+                             quiet = TRUE, count = TRUE){ 
   richness_df <- list()
   spp_count <- spp_df %>% count(Key, Species)
   for (l in code_list) {
@@ -181,10 +181,15 @@ species_richness <- function(spp_df, code_list = list("F", "G", "W", "O"),
     richness_df <- append(richness_df, list(df_row))
   }
   richness_df <- bind_rows(richness_df)
-  if (!quiet) {
-    print(richness_df)
+  if (count == TRUE) {
+    return(spp_count)
+    if(!quiet){
+      print(richness_df)
+    }
   }
-  return(spp_count)
+  if (!count) {
+    return(richness_df)
+  }
 }
 
 
@@ -354,7 +359,6 @@ which_treatment <- function(df_side) {
 
 
 #11: returns list of matching species (name only) btwn 3 dfs
-####yikes, order of dfs is not interchangeable ????
 spp_in_common <- function(df1, df2, df3) {
   common_spp <- list()
   for (sp in df1$Species){

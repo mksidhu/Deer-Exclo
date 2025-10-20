@@ -12,11 +12,8 @@ library(patchwork)
 
 source("C:/Users/DReaM/Documents/deer exclosure data/Deer-Exclo/Named_Functions.R")
 
-#"Paired" 1st 5 colors: "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99" 
 
-##do consistent colors
 ##when doing all three, go in order of control, two sided, four sided
-##set all the y axes to 1?
 
 
 #avg heights in-out browsed-out unbrowse of only woody spp in common
@@ -90,16 +87,15 @@ tot_avg_oc_fig <- function(df1_east, df1_west, df2_east, df2_west) {
                                   "Four-Sided" = filter(tidy_table2, str_detect(Location, "Outside")),
                                   .id = "id") 
  
-  legend_colors <- c("Forbs_%" = "#A6CEE3", "Grasses_%" = "#1F78B4", "NVGround_%" 
-                     = "#FB9A99", "Other_%" = "#B2DF8A", "Woody_%" = "#33A02C")
+  legend_colors <- c("Forbs_%" ="#B2DF8A", "Grasses_%" =  "#1F78B4", "NVGround_%" 
+                     = "#FB9A99", "Other_%" = "#A6CEE3", "Woody_%" = "#33A02C")
   legend_labels <- c("Forbs_%" = "Forb", "Grasses_%" = "Grass", "NVGround_%" = 
                        "Bare Ground", "Other_%" = "Other (Sedges/Ferns)", "Woody_%"
                      = "Woody")
   
   plot1 <-  table_inside_tot %>% ggplot(aes(x = id, y = Averages, fill = Category)) + 
     geom_col(position="dodge") + labs(title = "Control and Four-Sided Release Treatment Plots
-Plant Cover Averages", 
-                                      x = "Inside Transects", y = "Percent Averages") + 
+Plant Cover Averages", x = "Inside Transects", y = "Percent Averages") + 
     theme(legend.position = "none") + scale_fill_manual(values = legend_colors) +
     coord_cartesian(ylim = c(0, 1))
   plot2 <-  table_outside_tot %>% ggplot(aes(x = id, y = Averages, 
@@ -117,16 +113,6 @@ Plant Cover Averages",
 
 
 
-######fixing legend labels and specific consistent colors:
-# + scale_color_manual(
-#  name = "Custom Legend Title", 
-#  values = c("A" = "red", "B" = "blue", "C" = "green"), 
-#  labels = c("A" = "Category One", "B" = "Category Two", "C" = "Category Three")
-#)
-
-#reorder the fills so that paired values match colors (lightbl = O, blue = F, lime = W, green = Grass)
-
-
 
 ##creates figures of average ocular covers - maybe could make the combined use
 #optional parameters for df2 and df3 so dont need separate function for within figs
@@ -136,6 +122,11 @@ within_oc_fig <- function(df_east, df_west){
                               names_to = "Category", values_to = "Averages")
   
   title <- which_treatment(df_east)
+  legend_colors <- c("Forbs_%" = "#B2DF8A", "Grasses_%" = "#1F78B4", "NVGround_%" 
+                     = "#FB9A99", "Other_%" = "#A6CEE3", "Woody_%" = "#33A02C")
+  legend_labels <- c("Forbs_%" = "Forb", "Grasses_%" = "Grass", "NVGround_%" = 
+                       "Bare Ground", "Other_%" = "Other (Sedges/Ferns)", "Woody_%"
+                     = "Woody")
   
   plot1 <- tidy_ocular %>% filter(str_detect(Location, "Inside")) %>% 
     ggplot(aes(x = Location, y = Averages, fill = reorder(Category, Averages))) + 
@@ -143,16 +134,12 @@ within_oc_fig <- function(df_east, df_west){
     labs(title = glue("{title} Treatment Plant Cover Averages"), x = 
            "Inside Transects", y = "Percent Averages") + theme(legend.position = 
                                                                  "none") + 
-    scale_fill_brewer(palette = "Paired") + coord_cartesian(ylim = c(0, 1))
+    scale_fill_manual(values = legend_colors) + coord_cartesian(ylim = c(0, 1))
     
   plot2 <- tidy_ocular %>% filter(str_detect(Location, "Outside")) %>% 
     ggplot(aes(x = Location, y = Averages, fill = reorder(Category, Averages))) + 
-    geom_col(position="dodge") + scale_fill_manual(values = 
-                                                 brewer.pal(5, name = "Paired"),
-                                  labels = c("Forbs_%" = "Forb", "Grasses_%" = 
-                                   "Grass", "NVGround_%" = "Bare Ground", 
-                                   "Other_%" = "Other (Sedges/Ferns)", "Woody_%"
-                                   = "Woody"), name = "Cover") + 
+    geom_col(position="dodge") + scale_fill_manual(values = legend_colors,
+                                  labels = legend_labels, name = "Cover") + 
     labs(x = "Outside Transects") + theme(axis.title.y = element_blank()) + 
     coord_cartesian(ylim = c(0, 1))
 
@@ -192,6 +179,12 @@ btwn_oc_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
     tr <- "Outside"
   }
   
+  legend_colors <- c("Forbs_%" = "#B2DF8A", "Grasses_%" = "#1F78B4", "NVGround_%" 
+                     = "#FB9A99", "Other_%" = "#A6CEE3", "Woody_%" = "#33A02C")
+  legend_labels <- c("Forbs_%" = "Forb", "Grasses_%" = "Grass", "NVGround_%" = 
+                       "Bare Ground", "Other_%" = "Other (Sedges/Ferns)", "Woody_%"
+                     = "Woody")
+  
   plot1 <- tidy_table1 %>% filter(str_detect(Location, tr)) %>% 
     ggplot(aes(x = Location, y = Averages, fill = Category)) + 
     geom_col(position="dodge") + labs(title = 
@@ -199,55 +192,57 @@ btwn_oc_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
                                       x = glue("{title1} Transects"),
                                       y = "Percent Averages", 
                                       fill = "Cover") + 
-    theme(legend.position = "none") + scale_fill_brewer(palette = "Paired") +
+    theme(legend.position = "none") + scale_fill_manual(values = legend_colors) +
     coord_cartesian(ylim = c(0, 1))
   plot2 <- tidy_table2 %>% filter(str_detect(Location, tr)) %>% 
     ggplot(aes(x = Location, y = Averages, fill = Category)) + 
-    geom_col(position="dodge") + labs(x = glue("{title2} Transects"), 
-                                      y = "Percent Averages", 
-                                      fill = "Cover") + 
-    theme(legend.position = "none") + scale_fill_brewer(palette = "Paired") +
+    geom_col(position="dodge") + labs(x = glue("{title2} Transects")) + 
+    theme(legend.position = "none", axis.title.y = element_blank()) + 
+    scale_fill_manual(values = legend_colors) +
     coord_cartesian(ylim = c(0, 1))
   plot3 <- tidy_table3 %>% filter(str_detect(Location, tr)) %>% 
     ggplot(aes(x = Location, y = Averages, fill = Category)) + 
-    geom_col(position="dodge") + labs(x = glue("{title3} Transects"), 
-                                      y = "Percent Averages", 
-                                      fill = "Cover") + 
-    scale_fill_brewer(palette = "Paired") + coord_cartesian(ylim = c(0, 1))
+    geom_col(position="dodge") + scale_fill_manual(values = legend_colors,
+                                                   labels = legend_labels, 
+                                                   name = "Cover")  +
+    labs(x = glue("{title3} Transects")) + theme(axis.title.y = element_blank()) +
+    coord_cartesian(ylim = c(0, 1))
   
   plot4 <- plot1 + plot2 + plot3
   return(plot4)
 }
 
 
-##figures displaying species richness -- plant category colors arent standardized
-#and names are just letters
+##figures displaying species richness
 within_richness_fig <- function(df_east, df_west) {
-  inside_df <- species_richness(unite_treatment(df_east, df_west))
-  outside_df <- species_richness(unite_treatment(df_east, df_west, FALSE)) 
+  inside_df <- species_richness(unite_treatment(df_east, df_west), count = FALSE)
+  outside_df <- species_richness(unite_treatment(df_east, df_west, FALSE), count = FALSE) 
   
   title <- which_treatment(df_east)
+  legend_colors <- c("F" = "#B2DF8A", "G" = "#1F78B4", "O" = "#A6CEE3", 
+                     "W" = "#33A02C")
+  legend_labels <- c("F" = "Forb",  "W" = "Woody", "G" = "Grass", "O" = "Other (Sedges/Ferns)")
   
-  plot1 <- ggplot(inside_df,aes(x = Key, y = Count, fill = Key)) + 
-    geom_col(position="dodge") + labs(title = glue("{title} Species Richness"), 
-                                      x = "Inside") + 
-    scale_fill_brewer(palette = "Paired") + theme(legend.position = "none", 
-                                                  axis.text.x = element_blank(),
-                                                  axis.ticks.x = element_blank()) 
+  plot1 <- ggplot(inside_df, aes(x = Key, y = Count, fill = Key)) + 
+    geom_col(position="dodge") + scale_fill_manual(values = legend_colors) + 
+    labs(title = glue("{title} Species Richness"), x = "Inside") + 
+    theme(legend.position = "none", axis.text.x = element_blank(),
+          axis.ticks.x = element_blank()) + coord_cartesian(ylim = c(0, 15))
   #+ geom_text(aes(label = Count))
   
   plot2 <- ggplot(outside_df, aes(x = Key, y = Count, fill = Key)) + 
-    geom_col(position="dodge") + labs(x = "Outside", 
-                                      fill = "Plant Category") + 
-    scale_fill_brewer(palette = "Paired") + theme(axis.text.x = element_blank(),
+    geom_col(position="dodge") + labs(x = "Outside") + 
+    scale_fill_manual(values = legend_colors, labels = legend_labels, 
+                  name = "Plant Category") + theme(axis.text.x = element_blank(),
                                                   axis.ticks.x = element_blank(),
-                                                  axis.title.y = element_blank())
+                                                  axis.title.y = element_blank()) + 
+    coord_cartesian(ylim = c(0, 15))
   # + geom_text(aes(label = Count))
   
   plot3 <- plot1 + plot2
   
   return(plot3)
-} #y axis ##s arent standard
+}
 
 
 
@@ -257,52 +252,58 @@ btwn_richness_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
   title2 <- which_treatment(df2_east)
   title3 <- which_treatment(df3_east)
   
+  legend_colors <- c("F" = "#B2DF8A", "G" = "#1F78B4", "O" = "#A6CEE3", 
+                     "W" = "#33A02C")
+  legend_labels <- c("F" = "Forb",  "W" = "Woody", "G" = "Grass", "O" = "Other (Sedges/Ferns)")
+  
   if (inside == TRUE){
-    inside_df1 <- species_richness(unite_treatment(df1_east, df1_west))
-    inside_df2 <- species_richness(unite_treatment(df2_east, df2_west))
-    inside_df3 <- species_richness(unite_treatment(df3_east, df3_west))
+    inside_df1 <- species_richness(unite_treatment(df1_east, df1_west), count = FALSE)
+    inside_df2 <- species_richness(unite_treatment(df2_east, df2_west), count = FALSE)
+    inside_df3 <- species_richness(unite_treatment(df3_east, df3_west), count = FALSE)
     plot1 <- ggplot(inside_df1, aes(x = Key, y = Count, fill = Key)) + 
       geom_col(position="dodge") + labs(title = "Species Richness - Inside Plots", 
                                         x = glue("{title1}")) + 
-      scale_fill_brewer(palette = "Paired") + theme(legend.position = "none", 
+      scale_fill_manual(values = legend_colors) + theme(legend.position = "none", 
                                                     axis.text.x = element_blank(),
                                                     axis.ticks.x = element_blank()) + 
       coord_cartesian(ylim = c(0, 15))
     plot2 <- ggplot(inside_df2, aes(x = Key, y = Count, fill = Key)) + 
       geom_col(position="dodge") + labs(x = glue("{title2}")) + 
-      scale_fill_brewer(palette = "Paired") + theme(legend.position = "none", 
+      scale_fill_manual(values = legend_colors) + theme(legend.position = "none", 
                                                     axis.text.x = element_blank(),
                                                     axis.ticks.x = element_blank(),
                                                     axis.title.y = element_blank()) +
       coord_cartesian(ylim = c(0, 15))
     plot3 <- ggplot(inside_df3, aes(x = Key, y = Count, fill = Key)) + 
-      geom_col(position="dodge") + labs(x = glue("{title3}"), fill = "Plant Category") + 
-      scale_fill_brewer(palette = "Paired") + theme(axis.text.x = element_blank(),
+      geom_col(position="dodge") + labs(x = glue("{title3}")) + 
+      scale_fill_manual(values = legend_colors, labels = legend_labels, 
+                        name = "Plant Category") + theme(axis.text.x = element_blank(),
                                                     axis.ticks.x = element_blank(),
                                                     axis.title.y = element_blank()) + 
       coord_cartesian(ylim = c(0, 15))
   }
   else {
-    outside_df1 <- species_richness(unite_treatment(df1_east, df1_west, FALSE)) 
-    outside_df2 <- species_richness(unite_treatment(df2_east, df2_west, FALSE)) 
-    outside_df3 <- species_richness(unite_treatment(df3_east, df3_west, FALSE)) 
+    outside_df1 <- species_richness(unite_treatment(df1_east, df1_west, FALSE), count = FALSE) 
+    outside_df2 <- species_richness(unite_treatment(df2_east, df2_west, FALSE), count = FALSE) 
+    outside_df3 <- species_richness(unite_treatment(df3_east, df3_west, FALSE), count = FALSE) 
     plot1 <- ggplot(outside_df1, aes(x = Key, y = Count, fill = Key)) + 
       geom_col(position="dodge") + labs(title = "Species Richness - Outside Plots", 
                                         x = glue("{title1}")) + 
-      scale_fill_brewer(palette = "Paired") + theme(legend.position = "none", 
+      scale_fill_manual(values = legend_colors) + theme(legend.position = "none", 
                                                     axis.text.x = element_blank(),
                                                     axis.ticks.x = element_blank()) + 
       coord_cartesian(ylim = c(0, 15))
     plot2 <- ggplot(outside_df2, aes(x = Key, y = Count, fill = Key)) + 
       geom_col(position="dodge") + labs(x = glue("{title2}")) + 
-      scale_fill_brewer(palette = "Paired") + theme(legend.position = "none", 
+      scale_fill_manual(values = legend_colors) + theme(legend.position = "none", 
                                                     axis.text.x = element_blank(),
                                                     axis.ticks.x = element_blank(),
                                                     axis.title.y = element_blank()) + 
       coord_cartesian(ylim = c(0, 15))
     plot3 <- ggplot(outside_df3, aes(x = Key, y = Count, fill = Key)) + 
-      geom_col(position="dodge") + labs(x = glue("{title3}"), fill = "Plant Category") + 
-      scale_fill_brewer(palette = "Paired") + theme(axis.text.x = element_blank(),
+      geom_col(position="dodge") + labs(x = glue("{title3}")) + 
+      scale_fill_manual(values = legend_colors, labels = legend_labels, 
+                        name = "Plant Category") + theme(axis.text.x = element_blank(),
                                                     axis.ticks.x = element_blank(),
                                                     axis.title.y = element_blank()) + 
       coord_cartesian(ylim = c(0, 15))
@@ -312,8 +313,8 @@ btwn_richness_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
 }
 
 
-##figure of proportion of invasive species for only woodies
 
+##figure of proportion of invasive species for only woodies
 woody_invasive_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east, 
                                df3_west) {
   title1 <- which_treatment(df1_east)
@@ -386,9 +387,9 @@ common_in_w_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
   
   common_spp <- spp_in_common(df1_with_heights, df2_with_heights, df3_with_heights)
   
-  df1_common <- df1 %>% filter(Species %in% common_spp)
-  df2_common <- df2 %>% filter(Species %in% common_spp)
-  df3_common <- df3 %>% filter(Species %in% common_spp)
+  df1_common <- df1_with_heights %>% filter(Species %in% common_spp)
+  df2_common <- df2_with_heights %>% filter(Species %in% common_spp)
+  df3_common <- df3_with_heights %>% filter(Species %in% common_spp)
   
   
   plot1 <- ggplot(df1_common, aes(x = Species, y = Average_Height, fill = Species)) + 
@@ -419,7 +420,6 @@ common_in_w_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
 
 
 ##from most to least preferred: woody and forb spp browse comparing all three dfs
-
 outside_brow_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east, 
                                   df3_west, Woody = TRUE) {
   title1 <- which_treatment(df1_east)
