@@ -1,8 +1,4 @@
 
-####This file contains all the functions for Deer Data analysis. 
-
-setwd("C:/Users/DReaM/Documents/deer exclosure data")
-
 library(readr)
 
 plant_key <- read_csv("Botanical Key.csv")
@@ -23,7 +19,7 @@ library(stringr)
 library(dplyr)
 library(tidyr)
 
-##1: ocular cover. optional parameter to fix cover estimates to sum = 100%
+##1: ocular cover
 convert_ocular <- function(x) {
   x[x == 1] <- ((0 + 5)/2)/100
   x[x == 2] <- ((5 + 25)/2)/100
@@ -34,6 +30,7 @@ convert_ocular <- function(x) {
   return(x)
 }
 
+##optional function to fix cover estimates to sum = 100%
 adjusted_ocular <- function(df_side) {
   ocular_cols = 5:9 
   df_side_sums <- cbind(convert_ocular(df_side[ocular_cols]), Sums =
@@ -99,7 +96,8 @@ cover_avgs <- function(df_east, df_west, adjust = FALSE) {
 
 ##2: keying function: takes species name, returns associated veg letter 
 keying_code <- function(spp) {
-  key_row <- str_which(spp, plant_key$Code)
+  spspp <- paste0("^", spp, "$")
+  key_row <- str_which(plant_key$Code, spspp)
   pk <- plant_key[key_row, 1]
   return(pk)
 } 
@@ -151,7 +149,7 @@ unite_treatment <- function(df_east, df_west, inside = TRUE) {
 ##or all categories as a print statement, accounting for duplicates. 
 ##creates df of all spp (including dupes and unks) and counts
 species_richness <- function(spp_df, code_list = list("F", "G", "W", "O"), 
-                             quiet = TRUE, count = TRUE){ 
+                             count = TRUE, quiet = TRUE){ 
   richness_df <- list()
   spp_count <- spp_df %>% count(Key, Species)
   for (l in code_list) {
@@ -181,14 +179,14 @@ species_richness <- function(spp_df, code_list = list("F", "G", "W", "O"),
     richness_df <- append(richness_df, list(df_row))
   }
   richness_df <- bind_rows(richness_df)
-  if (count == TRUE) {
-    return(spp_count)
-    if(!quiet){
-      print(richness_df)
-    }
+  if (!quiet){
+    print(richness_df)
   }
   if (!count) {
     return(richness_df)
+  }
+  else{
+    return(spp_count)
   }
 }
 
@@ -228,27 +226,28 @@ invasive_percents <- function(df_richness) {
 ##returns df with % browse by species 
 #####could combine this with inside and outside
 
-
-##for some reason two sided BlkCherry % browse shows up twice??
 percent_browse_outside <- function(treatment_listing_df, 
                                    treatment_richness_counts, heights = TRUE,
                                    quiet = FALSE) {
   treatment_counts_wf <- treatment_richness_counts %>% 
     filter((Key == "W" | Key == "F") & (n >= 5))
+  
   df_to_eval <- treatment_listing_df %>% filter(Species %in% treatment_counts_wf$Species)
   
   summarise_avg_heights <- df_to_eval %>% group_by(Browse, Species) %>% 
-    summarise(AvgHeight = mean(Height, na.rm = TRUE), Count = n(), 
+    summarise(AvgHeight = round(mean(Height, na.rm = TRUE), 1), Count = n(), 
               .groups = "keep")
+  
   df <- summarise_avg_heights %>% filter(Browse == 1)
   
   summarise_browse <- list()
   for (sp in treatment_counts_wf$Species) {
+    spspp <- paste0("^", sp, "$")
     col_n = 4 #column for species count
-    cc <- df[str_which(df$Species, regex(paste0("^", sp, "$"))), col_n]
+    cc <- df[str_which(df$Species, regex(spspp)), col_n]
     c <- treatment_counts_wf[str_which(treatment_counts_wf$Species, 
-                                       regex(paste0("^", sp, "$"))), (col_n - 1)]
-    if (nrow(cc) > 0) {
+                                       regex(spspp)), (col_n - 1)]
+    if (nrow(cc) == 1) {
       percent <- round(((cc/c)*100), 1)
       if ((heights == TRUE) && (quiet == FALSE)) {
         print(glue("{sp}: {percent}% browsed"))
@@ -273,7 +272,6 @@ percent_browse_outside <- function(treatment_listing_df,
     return(summarise_avg_heights)
   }
 }
-#could pivot_wider and turn create browse/unbrowse as cols but necessary? 
 
 
 ##8: find average height of every woody species over 5 individuals. removes heights of na,
@@ -312,33 +310,34 @@ avg_inside_heights <- function(treatment_richness_count, treatment_listing_df){
   df_over_5_woodies <- avg_spp_heights(treatment_woodies, treatment_listing_df)
   return(df_over_5_woodies)
 }
-#df_avg_spp_heights <- this function
 
 
 
-##9: main functions all combined so it doesn't return a million different dfs
+
+##9: main functions all combined so it doesn't return a million different dfs to
+##the global environment
 total_analysis <- function(df_east, df_west){
-  #print("Occular Cover Averages")
-  #print(cover_avgs(df_east, df_west))
+  print("Occular Cover Averages")
+  print(cover_avgs(df_east, df_west))
   
   inside <- unite_treatment(df_east, df_west, TRUE)
   outside <- unite_treatment(df_east, df_west, FALSE)
   
   print("Inside: Species Richness")
-  inside_richness <- species_richness(inside, quiet = FALSE)
+  inside_richness <- species_richness(inside, quiet = FALSE, count = TRUE)
   print("Outside: Species Richness")
-  outside_richness <- species_richness(outside, quiet = FALSE)
+  outside_richness <- species_richness(outside, quiet = FALSE, count = TRUE)
   
-  #print("Inside: Count and Proportion of Invasive Species")
-  #print(invasive_percents(inside_richness))
-  #print("Outside: Count and Proportion of Invasive Species")
-  #print(invasive_percents(outside_richness))
+  print("Inside: Count and Proportion of Invasive Species")
+  print(invasive_percents(inside_richness))
+  print("Outside: Count and Proportion of Invasive Species")
+  print(invasive_percents(outside_richness))
   
   print("Inside: Woody Average Heights")
   print(avg_inside_heights(inside_richness, inside), na.print = "NA", n = Inf)
   print("Outside: Counts of Woody and Forb Browse and Average Heights")
-  print(percent_browse_outside(outside, outside_richness), 
-        na.print = "NA", n = Inf)
+  print(percent_browse_outside(outside, outside_richness), na.print = "NA", 
+        n = Inf)
 }
 
 

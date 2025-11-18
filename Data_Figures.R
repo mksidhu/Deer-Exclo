@@ -10,7 +10,7 @@ library(ggplot2)
 library(RColorBrewer)
 library(patchwork)
 
-source("C:/Users/DReaM/Documents/deer exclosure data/Deer-Exclo/Named_Functions.R")
+source("Named_Functions.R")
 
 
 ##when doing all three, go in order of control, two sided, four sided
@@ -36,23 +36,28 @@ common_avg_heights_fig <- function(df_east, df_west){
     geom_col(position="dodge") + labs(title = 
                                         glue("Average Common Woody Heights 
                                              by Transect and Browse - {title}"), 
-                                      x = "Inside Transects", y = "Average Height (cm)") + 
-    scale_fill_brewer(palette = "Paired") + theme(legend.position = "none") + 
+                                      x = "Inside", y = "Average Height (cm)") + 
+    scale_fill_brewer(palette = "Paired") + theme(legend.position = "none", 
+                                                  axis.text.x = element_blank(),
+                                                  axis.ticks.x = element_blank()) + 
     coord_cartesian(ylim = c(0, 100))
   plot2 <- ggplot((outside_common %>% filter(Browse == 1)), aes(x = Species,
                                                                 y = AvgHeight, 
                                                             fill = Species)) + 
-    geom_col(position="dodge") + labs(x = "Outside Transects - Browsed") + 
+    geom_col(position="dodge") + labs(x = "Outside - Browsed") + 
     scale_fill_brewer(palette = "Paired") + theme(legend.position = "none",
-                                                  axis.title.y = element_blank()) +
+                                                  axis.title.y = element_blank(), 
+                                                  axis.text.x = element_blank(),
+                                                  axis.ticks.x = element_blank()) +
     coord_cartesian(ylim = c(0, 100))
   plot3 <- ggplot((outside_common %>% filter(Browse == 0)), aes(x = Species, 
                                                                 y = AvgHeight, 
                                                             fill = Species)) + 
-    geom_col(position="dodge") + labs(x = "Outside Transects - Unbrowsed", 
+    geom_col(position="dodge") + labs(x = "Outside - Unbrowsed", 
                                       fill = "Species") + 
-    scale_fill_brewer(palette = "Paired") + theme(legend.position = "none",
-                                                  axis.title.y = element_blank()) + 
+    scale_fill_brewer(palette = "Paired") + theme(axis.title.y = element_blank(), 
+                                                  axis.text.x = element_blank(),
+                                                  axis.ticks.x = element_blank()) + 
     coord_cartesian(ylim = c(0, 100))
   
   plot4 <- plot1 + plot2 + plot3
@@ -102,7 +107,7 @@ Plant Cover Averages", x = "Inside Transects", y = "Percent Averages") +
                                              fill = Category)) + 
     geom_col(position="dodge") + scale_fill_manual(values = legend_colors,
                                                    labels = legend_labels, 
-                                                   name = "Cover") +
+                                                   name = "Plant Category") +
     labs(x = "Outside Transects") + theme(axis.title.y = element_blank()) +
     coord_cartesian(ylim = c(0, 1))
   
@@ -157,19 +162,22 @@ btwn_oc_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
                               cols = str_which(colnames(cover_avgs(df1_east, 
                                                                    df1_west)),
                                                "%"), names_to = "Category", 
-                              values_to = "Averages")
+                              values_to = "Averages") %>% 
+    filter(str_detect(Location, "Total"))
   title1 <- which_treatment(df1_east)
   
   tidy_table2 <- pivot_longer(cover_avgs(df2_east, df2_west), cols = 
                                 str_which(colnames(cover_avgs(df2_east, 
                                                               df2_west)),"%"), 
-                              names_to = "Category", values_to = "Averages")
+                              names_to = "Category", values_to = "Averages") %>% 
+    filter(str_detect(Location, "Total"))
   title2 <- which_treatment(df2_east)
   
   tidy_table3 <- pivot_longer(cover_avgs(df3_east, df3_west), cols = 
                                 str_which(colnames(cover_avgs(df3_east, 
                                                               df3_west)),"%"), 
-                              names_to = "Category", values_to = "Averages")
+                              names_to = "Category", values_to = "Averages") %>% 
+    filter(str_detect(Location, "Total"))
   title3 <- which_treatment(df3_east)
   
   if (inside == TRUE){
@@ -189,23 +197,26 @@ btwn_oc_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
     ggplot(aes(x = Location, y = Averages, fill = Category)) + 
     geom_col(position="dodge") + labs(title = 
                                         glue("{tr} Plots Plant Cover Averages"), 
-                                      x = glue("{title1} Transects"),
-                                      y = "Percent Averages", 
-                                      fill = "Cover") + 
-    theme(legend.position = "none") + scale_fill_manual(values = legend_colors) +
+                                      x = glue("{title1}"),
+                                      y = "Percent Averages") + 
+    theme(legend.position = "none", axis.text.x = element_blank(),
+          axis.ticks.x = element_blank()) + scale_fill_manual(values = legend_colors) +
     coord_cartesian(ylim = c(0, 1))
   plot2 <- tidy_table2 %>% filter(str_detect(Location, tr)) %>% 
     ggplot(aes(x = Location, y = Averages, fill = Category)) + 
-    geom_col(position="dodge") + labs(x = glue("{title2} Transects")) + 
-    theme(legend.position = "none", axis.title.y = element_blank()) + 
+    geom_col(position="dodge") + labs(x = glue("{title2}")) + 
+    theme(legend.position = "none", axis.title.y = element_blank(), 
+          axis.text.x = element_blank(), axis.ticks.x = element_blank()) + 
     scale_fill_manual(values = legend_colors) +
     coord_cartesian(ylim = c(0, 1))
   plot3 <- tidy_table3 %>% filter(str_detect(Location, tr)) %>% 
     ggplot(aes(x = Location, y = Averages, fill = Category)) + 
     geom_col(position="dodge") + scale_fill_manual(values = legend_colors,
                                                    labels = legend_labels, 
-                                                   name = "Cover")  +
-    labs(x = glue("{title3} Transects")) + theme(axis.title.y = element_blank()) +
+                                                   name = "Plant Category")  +
+    labs(x = glue("{title3}")) + theme(axis.title.y = element_blank(), 
+                                       axis.text.x = element_blank(),
+                                       axis.ticks.x = element_blank()) +
     coord_cartesian(ylim = c(0, 1))
   
   plot4 <- plot1 + plot2 + plot3
@@ -407,7 +418,7 @@ common_in_w_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
                                                   axis.title.y = element_blank()) +
     coord_cartesian(ylim = c(0, 100))
   plot3 <- ggplot(df3_common, aes(x = Species, y = Average_Height, fill = Species)) + 
-    geom_col(position="dodge") + labs(x = glue("{title3}"), fill = "Plot") + 
+    geom_col(position="dodge") + labs(x = glue("{title3}")) + 
     scale_fill_brewer(palette = "Paired") + theme(axis.text.x = element_blank(),
                                                   axis.ticks.x = element_blank(),
                                                   axis.title.y = element_blank()) + 
@@ -451,18 +462,21 @@ outside_brow_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
     geom_col(position="dodge") + labs(title = 
                                         glue("Percent Browse of Common {type} Species - Outside Plots"), 
                                       x = glue("{title1}"), y = "Percent Browse") + 
-    scale_fill_brewer(palette = "Paired") + theme(legend.position = "none") + 
+    scale_fill_brewer(palette = "Paired") + theme(axis.text.x = element_blank(),
+                                                  axis.ticks.x = element_blank()) + 
     coord_cartesian(ylim = c(0, 100))
   plot2 <- ggplot((df2_brow %>% filter(Key == vegetation)), aes(x = reorder(Species, -Percent_Browse),
                                                                 y = Percent_Browse, fill = Species)) + 
     geom_col(position="dodge") + labs(x = glue("{title2}")) + 
-    scale_fill_brewer(palette = "Paired") + theme(legend.position = "none",
+    scale_fill_brewer(palette = "Paired") + theme(axis.text.x = element_blank(),
+                                                  axis.ticks.x = element_blank(),
                                                   axis.title.y = element_blank()) +
     coord_cartesian(ylim = c(0, 100))
   plot3 <- ggplot((df3_brow %>% filter(Key == vegetation)), aes(x = reorder(Species, -Percent_Browse), 
                                                                 y = Percent_Browse, fill = Species)) + 
     geom_col(position="dodge") + labs(x = glue("{title3}")) + 
-    scale_fill_brewer(palette = "Paired") + theme(legend.position = "none",
+    scale_fill_brewer(palette = "Paired") + theme(axis.text.x = element_blank(),
+                                                  axis.ticks.x = element_blank(),
                                                   axis.title.y = element_blank()) + 
     coord_cartesian(ylim = c(0, 100))
   
