@@ -12,21 +12,28 @@ control_east <- read_csv("Control_East.csv")
 two_west <- read_csv("2-Sided_West.csv")
 two_east <- read_csv("2-Sided_East.csv")
 
-
 library(purrr)
 library(glue)
 library(stringr)
 library(dplyr)
 library(tidyr)
 
-##1: ocular cover
+
+#0: standard error, but needs to be used inside a data-masking verb or function like summarise()
+standard_error <- function(col){
+  x <- na.omit(col)
+  return(sd(x)/sqrt(n()))
+}
+
+
+##1: converted ocular cover key to midpoint (proportions, not %)
 convert_ocular <- function(x) {
-  x[x == 1] <- ((0 + 5)/2)/100
-  x[x == 2] <- ((5 + 25)/2)/100
-  x[x == 3] <- ((25 + 50)/2)/100
-  x[x == 4] <- ((50 + 75)/2)/100
-  x[x == 5] <- ((75 + 95)/2)/100
-  x[x == 6] <- ((95 + 100)/2)/100
+  x[x == 1] <- ((0 + 5)/2)
+  x[x == 2] <- ((5 + 25)/2)
+  x[x == 3] <- ((25 + 50)/2)
+  x[x == 4] <- ((50 + 75)/2)
+  x[x == 5] <- ((75 + 95)/2)
+  x[x == 6] <- ((95 + 100)/2)
   return(x)
 }
 
@@ -35,20 +42,21 @@ adjusted_ocular <- function(df_side) {
   ocular_cols = 5:9 
   df_side_sums <- cbind(convert_ocular(df_side[ocular_cols]), Sums =
                           rowSums(convert_ocular(df_side[, ocular_cols])))
-  r_adj_t = list()
+
+  rows_adj_tot = list()
   for (r in 1:nrow(df_side_sums)){
-    s <- df_side_sums$Sums[r]
-    c_adj <- df_side_sums[r, 1:5]
-    if (is.na(s) == TRUE) {
-      r_adj <- c_adj
+    row_sum <- df_side_sums$Sums[r]
+    cols_to_adj <- df_side_sums[r, 1:5]
+    if (is.na(row_sum) == TRUE) {
+      rows_adjusted <- cols_to_adj
     }
     else{
-      r_adj <- c_adj %>% map(\(x) round((x/s), 3))
+      rows_adjusted <- cols_to_adj %>% map(\(x) ((x/row_sum) *100))
     }
-    r_adj_t <- append(r_adj_t, list(r_adj))
+    rows_adj_tot <- append(rows_adj_tot, list(rows_adjusted))
   }
-  adj_df <- bind_rows(r_adj_t)
-  return(adj_df)
+  adjusted_df <- bind_rows(rows_adj_tot)
+  return(adjusted_df)
 }
 
 
@@ -67,19 +75,25 @@ cover_avgs <- function(df_east, df_west, adjust = FALSE) {
   outside_rows = 1:10
   
   e_inside_avg <- east_converted_cover[inside_rows,] %>% 
-    map_df(\(x) round(mean(x, na.rm = TRUE), 3))
+    summarise(across("Woody_%":"Other_%", 
+                     list(mean = ~mean(.,na.rm = TRUE), SE = standard_error)))
   e_outside_avg <- east_converted_cover[outside_rows,] %>% 
-    map_df(\(x) round(mean(x, na.rm = TRUE), 3))
+    summarise(across("Woody_%":"Other_%", 
+                     list(mean = ~mean(.,na.rm = TRUE), SE = standard_error)))
   w_inside_avg <- west_converted_cover[inside_rows,] %>% 
-    map_df(\(x) round(mean(x, na.rm = TRUE), 3))
+    summarise(across("Woody_%":"Other_%", 
+                     list(mean = ~mean(.,na.rm = TRUE), SE = standard_error)))
   w_outside_avg <- west_converted_cover[outside_rows,] %>% 
-    map_df(\(x) round(mean(x, na.rm = TRUE), 3))
-  tot_inside_avg <- map2_df(east_converted_cover[inside_rows,], 
-                            west_converted_cover[inside_rows,], 
-                            \(x, y) round(mean(c(x, y), na.rm = TRUE), 3))
-  tot_outside_avg <- map2_df(east_converted_cover[outside_rows,], 
-                             west_converted_cover[outside_rows,], 
-                             \(x, y) round(mean(c(x, y), na.rm = TRUE), 3))
+    summarise(across("Woody_%":"Other_%", 
+                     list(mean = ~mean(.,na.rm = TRUE), SE = standard_error)))
+  tot_inside_avg <- bind_rows(east_converted_cover[inside_rows,], 
+                            west_converted_cover[inside_rows,]) %>% 
+    summarise(across("Woody_%":"Other_%", list(mean = ~mean(.,na.rm = TRUE), 
+                                               SE = standard_error)))
+  tot_outside_avg <- bind_rows(east_converted_cover[outside_rows,], 
+                             west_converted_cover[outside_rows,]) %>% 
+    summarise(across("Woody_%":"Other_%", list(mean =~mean(.,na.rm = TRUE), 
+                                               SE = standard_error))) 
   
   four_sided_avgs <- bind_rows(list("East Inside" = e_inside_avg, "West Inside" 
                                     = w_inside_avg, "East Outside" = 
@@ -87,7 +101,8 @@ cover_avgs <- function(df_east, df_west, adjust = FALSE) {
                                       w_outside_avg, "Inside Total" =
                                       tot_inside_avg, "Outside Total" = 
                                       tot_outside_avg),
-                               .id = "Location")
+                               .id = "Location") %>% mutate(across(contains("_%_"),
+                                                                   ~round(.,1)))
   
   return(four_sided_avgs)
 }
@@ -215,7 +230,7 @@ invasive_percents <- function(df_richness) {
   df_invasives <- keying_invasive(df_richness)
   df_plant_sums <- df_richness %>% group_by(Key) %>% summarise(Tot_Count = sum(n))
   df_counts <- inner_join(df_invasives, df_plant_sums, by = "Key") %>% 
-    mutate(Prop_Invasive = round((Invasive_Count / Tot_Count), 3))
+    mutate(Percent_Invasive = round(((Invasive_Count / Tot_Count) * 100), 3))
   return(df_counts)
 } 
 
@@ -235,7 +250,8 @@ percent_browse_outside <- function(treatment_listing_df,
   df_to_eval <- treatment_listing_df %>% filter(Species %in% treatment_counts_wf$Species)
   
   summarise_avg_heights <- df_to_eval %>% group_by(Browse, Species) %>% 
-    summarise(AvgHeight = round(mean(Height, na.rm = TRUE), 1), Count = n(), 
+    summarise(AvgHeight = round(mean(Height, na.rm = TRUE), 1), 
+              SE = round(standard_error(Height), 1), Count = n(), 
               .groups = "keep")
   
   df <- summarise_avg_heights %>% filter(Browse == 1)
@@ -243,24 +259,25 @@ percent_browse_outside <- function(treatment_listing_df,
   summarise_browse <- list()
   for (sp in treatment_counts_wf$Species) {
     spspp <- paste0("^", sp, "$")
-    col_n = 4 #column for species count
-    cc <- df[str_which(df$Species, regex(spspp)), col_n]
-    c <- treatment_counts_wf[str_which(treatment_counts_wf$Species, 
-                                       regex(spspp)), (col_n - 1)]
-    if (nrow(cc) == 1) {
-      percent <- round(((cc/c)*100), 1)
+    count_browse <- df[str_which(df$Species, regex(spspp)), ncol(df)]
+    count_tot <- treatment_counts_wf[str_which(treatment_counts_wf$Species, 
+                                       regex(spspp)), 
+                                     str_which(colnames(treatment_counts_wf),
+                                               "n")]
+    if (nrow(count_browse) == 1) {
+      percent_brow <- round(((count_browse/count_tot)*100), 1)
       if ((heights == TRUE) && (quiet == FALSE)) {
-        print(glue("{sp}: {percent}% browsed"))
+        print(glue("{sp}: {percent_brow}% browsed"))
       }
     }
     else {
-      percent <- 0
+      percent_brow <- 0
       if ((heights == TRUE) && (quiet == FALSE)) {
         print(glue("{sp} has no browsed individuals"))
       }
     }
     key <- keying_code(sp)
-    sum_brow_row <- data.frame(key, sp, percent)
+    sum_brow_row <- data.frame(key, sp, percent_brow)
     colnames(sum_brow_row) <- c("Key", "Species", "Percent_Browse")
     summarise_browse <- append(summarise_browse, list(sum_brow_row))
   }
@@ -281,25 +298,23 @@ percent_browse_outside <- function(treatment_listing_df,
 ###########i think this would still find the avg height for unkwood
 avg_spp_heights <- function(treatment_count, treatment_df, evaluate_browse = FALSE) {
   df_species <- list()
-  for (s in 1:nrow(treatment_count)) {
+  for (spp_row in 1:nrow(treatment_count)) {
     #print(s)
     Count = 3
-    spp_count <- treatment_count[s, Count]
+    spp_count <- treatment_count[spp_row, Count]
     #print(spp_count)
-    spp_df <- treatment_df %>% filter(Species == treatment_count$Species[s])
+    spp_df <- treatment_df %>% filter(Species == treatment_count$Species[spp_row])
     #print(spp_df)
     if (evaluate_browse == FALSE) {
       na_height_count <- sum(is.na(spp_df$Height))
-      if ((spp_count - na_height_count) < 5) {
-        #print(glue("ran if, count is {spp_count - na_height_count}"))
-        next
+      if ((spp_count - na_height_count) >= 5) {
+        df_one_row <- summarise(spp_df, Average_Height = round(mean(Height, na.rm = TRUE), 1),
+              SE = round(standard_error(Height), 1)) %>%
+          mutate(Species = treatment_count$Species[spp_row], .before = 1)
       }
     }
-    spp_heights <- spp_df$Height
-    spp_avg_height <- round(mean(spp_heights, na.rm = TRUE), 1)
-    df_intm <- data.frame(Species = treatment_count$Species[s], Average_Height = spp_avg_height)
-    #print(df_intm)
-    df_species <- append(df_species, list(df_intm))
+
+    df_species <- append(df_species, list(df_one_row))
   } 
   return(bind_rows(df_species))
 }
@@ -310,8 +325,6 @@ avg_inside_heights <- function(treatment_richness_count, treatment_listing_df){
   df_over_5_woodies <- avg_spp_heights(treatment_woodies, treatment_listing_df)
   return(df_over_5_woodies)
 }
-
-
 
 
 ##9: main functions all combined so it doesn't return a million different dfs to
@@ -338,6 +351,11 @@ total_analysis <- function(df_east, df_west){
   print("Outside: Counts of Woody and Forb Browse and Average Heights")
   print(percent_browse_outside(outside, outside_richness), na.print = "NA", 
         n = Inf)
+  
+  print("Inside: Average Woody Height (Combined) in cm")
+  print(avg_heights_tot(inside))
+  print("Outside: Average Woody Height (Combined) in cm")
+  print(avg_heights_tot(outside))
 }
 
 
@@ -366,5 +384,17 @@ spp_in_common <- function(df1, df2, df3) {
     }
   }
   return(common_spp)
+}
+
+
+#12 average woody heights inside and out 
+
+avg_heights_tot <- function(treatment_df) {
+  avg_plant_heights <- treatment_df %>% group_by(Key) %>% 
+    summarise(Average = mean(Height, na.rm = TRUE), SE = standard_error(Height))
+  
+  avg_woody_height_df <- avg_plant_heights %>% filter(Key == "W")
+  
+  return(avg_woody_height_df)
 }
 
