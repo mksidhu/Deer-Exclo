@@ -1,4 +1,0 @@
-# Deer-Exclo
-
-## notes:
-testing
