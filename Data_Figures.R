@@ -37,7 +37,7 @@ common_avg_heights_fig <- function(df_east, df_west){
     scale_fill_manual(values = legend_colors) + theme(axis.text.x = element_blank(),
                                                   axis.ticks.x = element_blank(),
                                                   axis.title.y = element_blank()) + 
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   
   plot2 <- ggplot((outside_common %>% filter(Browse == 1)), aes(x = 
                                                               reorder(Species,
@@ -52,7 +52,8 @@ common_avg_heights_fig <- function(df_east, df_west){
                                              by Transect and Browse - {title}"),
                                       y = "Average Height (cm)") + 
     theme(legend.position = "none", axis.text.x = element_blank(), 
-          axis.ticks.x = element_blank()) + coord_cartesian(ylim = c(0, 100))
+          axis.ticks.x = element_blank()) + coord_cartesian(ylim = c(0, 100)) +
+    theme(text = element_text(size = 12))
   
   plot3 <- ggplot((outside_common %>% filter(Browse == 0)), aes(x = 
                                                                 reorder(Species,
@@ -67,7 +68,7 @@ common_avg_heights_fig <- function(df_east, df_west){
                                                   axis.text.x = element_blank(),
                                                   axis.ticks.x = element_blank(),
                                                   axis.title.y = element_blank()) + 
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   
   plot4 <- (plot2 + plot3 + plot1) + plot_annotation(tag_levels = "A") & 
     theme(plot.tag = element_text(size = 12, face = "bold"), 
@@ -76,58 +77,6 @@ common_avg_heights_fig <- function(df_east, df_west){
 }
 
 
-##ocular inside and outside tot avgs only control and four-sided: faceted 
-tot_avg_oc_fig <- function(df1_east, df1_west, df2_east, df2_west) {
-  
-  tidy_table1 <- pivot_longer(cover_avgs(df1_east, df1_west), 
-                              cols = c(contains("_mean"), contains("_SE")),
-                              cols_vary = "slowest",
-                              names_to = c("Category", ".value"), 
-                              names_sep = "_%_") %>% 
-    filter(str_detect(Location, "Total"))
-  
-  tidy_table2 <- pivot_longer(cover_avgs(df2_east, df2_west), cols = 
-                                c(contains("_mean"), contains("_SE")), 
-                              cols_vary = "slowest",
-                              names_to = c("Category", ".value"), 
-                              names_sep = "_%_") %>%
-    filter(str_detect(Location, "Total"))
- 
-  
-  table_inside_tot <-  bind_rows("Control" = filter(tidy_table1, str_detect(Location, "Inside")),
-                                 "Four-Sided" = filter(tidy_table2, str_detect(Location, "Inside")),
-                                 .id = "Plot")
-
-  table_outside_tot <-  bind_rows("Control" = filter(tidy_table1, str_detect(Location, "Outside")), 
-                                  "Four-Sided" = filter(tidy_table2, str_detect(Location, "Outside")),
-                                  .id = "Plot") 
- 
-  legend_colors <- c("Forbs" ="#B2DF8A", "Grasses" =  "#1F78B4", "NVGround" 
-                     = "#FB9A99", "Other" = "#A6CEE3", "Woody" = "#33A02C")
-  
-  plot1 <-  table_inside_tot %>% ggplot(aes(x = Plot, y = mean, fill = Category)) + 
-    geom_col(position="dodge", stat = "identity") + 
-    geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE), 
-                  position = position_dodge(), 
-                  color = "black") +
-    labs(title = "Control and Four-Sided Release Treatment Plots
-Plant Cover Averages", x = "Inside Transects", y = "Percent Averages") + 
-    theme(legend.position = "none") + scale_fill_manual(values = legend_colors) +
-    coord_cartesian(ylim = c(0, 100))
-  
-  plot2 <-  table_outside_tot %>% ggplot(aes(x = Plot, y = mean, 
-                                             fill = Category)) + 
-    geom_col(position="dodge", stat = "identity") + 
-    geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE), 
-                  position = position_dodge(), 
-                  color = "black") +
-    scale_fill_manual(values = legend_colors, name = "Plant Category") +
-    labs(x = "Outside Transects") + theme(axis.title.y = element_blank()) +
-    coord_cartesian(ylim = c(0, 100))
-  
-  plot3 <- plot1 + plot2 
-  return(plot3)
-}
 
 
 #ocular averages inside and out total averages of two dfs (like control and four-sided)
@@ -179,7 +128,7 @@ tot_cover_avg_fig <- function(df1_east, df1_west, df2_east, df2_west) {
                                  "Outside Total Woody" = "white"), 
                       name = "Plant Categories") + 
     scale_colour_manual(values = legend_colors, guide = "none") + 
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   
   legend_fill_names <- levels(interaction(list(factor(tots_df$Location), 
                                                fct_reorder(tots_df$Category, 
@@ -203,48 +152,6 @@ tot_cover_avg_fig <- function(df1_east, df1_west, df2_east, df2_west) {
 
 ##creates figures of average ocular covers - maybe could make the combined use
 #optional parameters for df2 and df3 so dont need separate function for within figs
-#faceted
-within_oc_fig <- function(df_east, df_west){
-  oc_df <- cover_avgs(df_east, df_west)
-  tidy_ocular <- pivot_longer(oc_df,  cols = c(contains("_mean"), 
-                                               contains("_SE")), 
-                              names_to = c("Category", ".value"), 
-                              names_sep = "_%_")
-  
-  title <- which_treatment(df_east)
-  legend_colors <- c("Forbs" = "#B2DF8A", "Grasses" = "#1F78B4", "NVGround" 
-                     = "#FB9A99", "Other" = "#A6CEE3", "Woody" = "#33A02C")
-  #legend_labels <- c("Forbs_%" = "Forb", "Grasses_%" = "Grass", "NVGround_%" = 
-   #                    "Bare Ground", "Other_%" = "Other (Sedges/Ferns)", "Woody_%"
-    #                 = "Woody")
-  
-  plot1 <- tidy_ocular %>% filter(str_detect(Location, "Inside")) %>% 
-    ggplot(aes(x = Location, y = mean, fill = reorder(Category, mean))) + 
-    geom_col(position="dodge", stat = "identity") + geom_errorbar(aes(ymin = mean - SE, 
-                                                    ymax = mean + SE), 
-                                                position = position_dodge(), 
-                                                color = "black") + 
-    labs(title = glue("{title} Treatment Plant Cover Averages"), x = 
-           "Inside Transects", y = "Percent Averages") +  
-    theme(legend.position = "none") +
-    scale_fill_manual(values = legend_colors) + 
-    coord_cartesian(ylim = c(0, 100))
-    
-  plot2 <- tidy_ocular %>% filter(str_detect(Location, "Outside")) %>% 
-    ggplot(aes(x = Location, y = mean, fill = reorder(Category, mean))) + 
-    geom_col(position="dodge", stat = "identity") + 
-    geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE), position = position_dodge(), 
-                  color = "black") +
-      scale_fill_manual(values = legend_colors, name = "Cover") +
-    labs(x = "Outside Transects") + theme(axis.title.y = element_blank()) + 
-    coord_cartesian(ylim = c(0, 100))
-
-  
-  plot3 <- plot1 + plot2
-  
-  return(plot3)
-}
-
 #faceted but outside is white bars with outlines. legend fill colors set to control--
 #need to fix for others
 alt_within_oc_fig <- function(df_east, df_west){
@@ -263,7 +170,7 @@ alt_within_oc_fig <- function(df_east, df_west){
                     position_dodge(),color = "black") +  
     theme(axis.title.y = element_blank()) + labs(x = "Inside Transects") + 
     scale_fill_manual(values = legend_colors, name = "Plant Categories") + 
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
 
   plot2 <- tidy_ocular %>% filter(str_detect(Location, "Outside")) %>% 
     ggplot(aes(x = Location, y = mean, color = reorder(Category, mean))) + 
@@ -276,7 +183,7 @@ alt_within_oc_fig <- function(df_east, df_west){
     scale_colour_manual(values = legend_colors) + theme(legend.position = "none") + 
     labs(title = glue("{title} Treatment Plant Cover Averages"), 
          y = "Percent Averages", x = "Outside Transects") + 
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
      
   plot3 <- (plot2 + plot1) + plot_annotation(tag_levels = "A") & 
     theme(plot.tag = element_text(size = 12, face = "bold"), 
@@ -327,7 +234,7 @@ btwn_oc_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
       geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE), position =
                       position_dodge(), color = "black") +
       scale_fill_manual(values = legend_colors) +
-      coord_cartesian(ylim = c(0, 100))
+      coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
     
     
     plot2 <- tidy_table2 %>% filter(str_detect(Location, tr)) %>% 
@@ -338,7 +245,7 @@ btwn_oc_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
       geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE), position =
                       position_dodge(), color = "black") +
       scale_fill_manual(values = legend_colors) +
-      coord_cartesian(ylim = c(0, 100))
+      coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
     
     plot3 <- tidy_table3 %>% filter(str_detect(Location, tr)) %>% 
       ggplot(aes(x = reorder(Category, mean), y = mean, fill = Category)) + 
@@ -349,7 +256,7 @@ btwn_oc_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
       labs(x = glue("{title3}")) + theme(axis.title.y = element_blank(), 
                                          axis.text.x = element_blank(),
                                          axis.ticks.x = element_blank()) +
-      coord_cartesian(ylim = c(0, 100))
+      coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
     
   }
   else {
@@ -367,7 +274,7 @@ btwn_oc_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
       geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE, group = Category),
                         position = position_dodge(), color = "black") +
       scale_color_manual(values = legend_colors) +
-      coord_cartesian(ylim = c(0, 100))
+      coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
     
     
     plot2 <- tidy_table2 %>% filter(str_detect(Location, tr)) %>% 
@@ -379,7 +286,7 @@ btwn_oc_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
       geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE, group = Category), 
                     position = position_dodge(), color = "black") +
       scale_color_manual(values = legend_colors) +
-      coord_cartesian(ylim = c(0, 100))
+      coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
     
     plot3 <- tidy_table3 %>% filter(str_detect(Location, tr)) %>% 
       ggplot(aes(x = reorder(Category, mean), y = mean, color = Category)) + 
@@ -392,7 +299,7 @@ btwn_oc_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
                                          axis.text.x = element_blank(),
                                          axis.ticks.x = element_blank()) +
       guides(color = guide_legend(override.aes = list(fill = legend_colors)))+ 
-      coord_cartesian(ylim = c(0, 100))
+      coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   }
 
 
@@ -473,7 +380,7 @@ model <- function(df1_east, df1_west, df2_east, df2_west) {
                                                              "#33A02C",
                                                              "#FB9A99",
                                                              "#FB9A99")))) +
-    coord_cartesian(ylim = c(0, 1))
+    coord_cartesian(ylim = c(0, 1)) + theme(text = element_text(size = 12))
   
   return(plot1 + plot_annotation(tag_levels = "A") & 
            theme(plot.tag = element_text(size = 12, face = "bold"), 
@@ -483,37 +390,6 @@ model <- function(df1_east, df1_west, df2_east, df2_west) {
 
 
 ##figures displaying species richness (faceted)
-within_richness_fig <- function(df_east, df_west) {
-  inside_df <- species_richness(unite_treatment(df_east, df_west), count = FALSE)
-  outside_df <- species_richness(unite_treatment(df_east, df_west, FALSE), count = FALSE) 
-  
-  title <- which_treatment(df_east)
-  legend_colors <- c("F" = "#B2DF8A", "G" = "#1F78B4", "O" = "#A6CEE3", 
-                     "W" = "#33A02C")
-  legend_labels <- c("F" = "Forb",  "W" = "Woody", "G" = "Grass", "O" = "Other (Sedges/Ferns)")
-  
-  plot1 <- ggplot(inside_df, aes(x = Key, y = Count, fill = Key)) + 
-    geom_col(position="dodge") + scale_fill_manual(values = legend_colors) + 
-    labs(title = glue("{title} Species Richness"), x = "Inside") + 
-    theme(legend.position = "none", axis.text.x = element_blank(),
-          axis.ticks.x = element_blank()) + coord_cartesian(ylim = c(0, 15))
-  #+ geom_text(aes(label = Count))
-  
-  plot2 <- ggplot(outside_df, aes(x = Key, y = Count, fill = Key)) + 
-    geom_col(position="dodge") + labs(x = "Outside") + 
-    scale_fill_manual(values = legend_colors, labels = legend_labels, 
-                  name = "Plant Category") + theme(axis.text.x = element_blank(),
-                                                  axis.ticks.x = element_blank(),
-                                                  axis.title.y = element_blank()) + 
-    coord_cartesian(ylim = c(0, 15))
-  # + geom_text(aes(label = Count))
-  
-  plot3 <- plot1 + plot2
-  
-  return(plot3)
-}
-
-#still faceted
 alt_within_richness_fig <- function(df_east, df_west) {
   inside_df <- species_richness(unite_treatment(df_east, df_west), count = FALSE)
   outside_df <- species_richness(unite_treatment(df_east, df_west, FALSE), count = FALSE) 
@@ -530,7 +406,7 @@ alt_within_richness_fig <- function(df_east, df_west) {
     labs(x = "Inside") + theme(axis.text.x = element_blank(),  
                                axis.title.y = element_blank(), 
                                axis.ticks.x = element_blank()) + 
-    coord_cartesian(ylim = c(0, 15))
+    coord_cartesian(ylim = c(0, 15)) + theme(text = element_text(size = 12))
 
   
   plot2 <- ggplot(outside_df, aes(x = reorder(Key, Count), y = Count, color = Key)) + 
@@ -539,7 +415,8 @@ alt_within_richness_fig <- function(df_east, df_west) {
                                       title = glue("{title} Species Richness")) + 
     scale_color_manual(values = legend_colors) + 
     theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
-          legend.position = "none") + coord_cartesian(ylim = c(0, 15))
+          legend.position = "none") + coord_cartesian(ylim = c(0, 15)) +
+    theme(text = element_text(size = 12))
 
   
   plot3 <- (plot2 + plot1) + plot_annotation(tag_levels = "A") & 
@@ -573,21 +450,21 @@ btwn_richness_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
       scale_fill_manual(values = legend_colors) + theme(legend.position = "none", 
                                                     axis.text.x = element_blank(),
                                                     axis.ticks.x = element_blank()) + 
-      coord_cartesian(ylim = c(0, 15))
+      coord_cartesian(ylim = c(0, 15)) + theme(text = element_text(size = 12))
     plot2 <- ggplot(inside_df2, aes(x = reorder(Key, Count), y = Count, fill = Key)) + 
       geom_col(position="dodge") + labs(x = glue("{title2}")) + 
       scale_fill_manual(values = legend_colors) + theme(legend.position = "none", 
                                                     axis.text.x = element_blank(),
                                                     axis.ticks.x = element_blank(),
                                                     axis.title.y = element_blank()) +
-      coord_cartesian(ylim = c(0, 15))
+      coord_cartesian(ylim = c(0, 15)) + theme(text = element_text(size = 12))
     plot3 <- ggplot(inside_df3, aes(x = reorder(Key, Count), y = Count, fill = Key)) + 
       geom_col(position="dodge") + labs(x = glue("{title3}")) + 
       scale_fill_manual(values = legend_colors, labels = legend_labels, 
                         name = "Plant Category") + theme(axis.text.x = element_blank(),
                                                     axis.ticks.x = element_blank(),
                                                     axis.title.y = element_blank()) + 
-      coord_cartesian(ylim = c(0, 15))
+      coord_cartesian(ylim = c(0, 15)) + theme(text = element_text(size = 12))
   }
   else {
     outside_df1 <- species_richness(unite_treatment(df1_east, df1_west, FALSE), count = FALSE) 
@@ -601,7 +478,7 @@ btwn_richness_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
       scale_color_manual(values = legend_colors) + theme(legend.position = "none", 
                                                     axis.text.x = element_blank(),
                                                     axis.ticks.x = element_blank()) + 
-      coord_cartesian(ylim = c(0, 15))
+      coord_cartesian(ylim = c(0, 15)) + theme(text = element_text(size = 12))
     plot2 <- ggplot(outside_df2, aes(x = reorder(Key, Count), y = Count, color = Key)) + 
       geom_col(position="dodge", stat = "identity", fill = "white", 
                linewidth = 1.25) + labs(x = glue("{title2}")) +
@@ -609,7 +486,7 @@ btwn_richness_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
                                                     axis.text.x = element_blank(),
                                                     axis.ticks.x = element_blank(),
                                                     axis.title.y = element_blank()) + 
-      coord_cartesian(ylim = c(0, 15))
+      coord_cartesian(ylim = c(0, 15)) + theme(text = element_text(size = 12))
     plot3 <- ggplot(outside_df3, aes(x = reorder(Key, Count), y = Count, color = Key)) + 
       geom_col(position="dodge", stat = "identity", fill = "white", 
                linewidth = 1.25) + labs(x = glue("{title3}")) + 
@@ -618,7 +495,7 @@ btwn_richness_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
       theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
             axis.title.y = element_blank()) + 
       guides(color = guide_legend(override.aes = list(fill = legend_colors))) + 
-      coord_cartesian(ylim = c(0, 15))
+      coord_cartesian(ylim = c(0, 15)) + theme(text = element_text(size = 12))
   }
   plot4 <- (plot1 + plot2 + plot3) + plot_annotation(tag_levels = "A") & 
     theme(plot.tag = element_text(size = 12, face = "bold"), 
@@ -665,7 +542,8 @@ woody_invasive_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
          y = "Proportion Invasive") + 
     scale_fill_manual(values = c("Inside" = "#33A02C", "Outside" = "white")) + 
     theme(legend.position = "none", axis.text.x = element_blank(),
-          axis.ticks.x = element_blank()) + coord_cartesian(ylim = c(0, 100))
+          axis.ticks.x = element_blank()) + coord_cartesian(ylim = c(0, 100)) +
+    theme(text = element_text(size = 12))
  
   plot2 <- ggplot(df2_props, aes(x = Plot, y = Percent_Invasive, fill = Plot)) + 
     geom_col(position="dodge", stat = "identity", color = "#33A02C", 
@@ -673,14 +551,15 @@ woody_invasive_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
     scale_fill_manual(values = c("Inside" = "#33A02C", "Outside" = "white")) + 
     theme(legend.position = "none", axis.text.x = element_blank(), 
           axis.ticks.x = element_blank(), axis.title.y = element_blank()) +
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   plot3 <- ggplot(df3_props, aes(x = Plot, y = Percent_Invasive, fill = Plot)) + 
     geom_col(position="dodge", stat = "identity", color = "#33A02C", 
              linewidth = 1.25) +  labs(x = glue("{title3}"), fill = "Plot") + 
     scale_fill_manual(values = c("Inside" = "#33A02C", "Outside" = "white")) + 
     guides(fill = guide_legend(override.aes = list(color = "#33A02C"))) +
     theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
-          axis.title.y = element_blank()) + coord_cartesian(ylim = c(0, 100))
+          axis.title.y = element_blank()) + coord_cartesian(ylim = c(0, 100)) +
+    theme(text = element_text(size = 12))
   
   
   plot4 <- (plot1 + plot2 + plot3) + plot_annotation(tag_levels = "A") & 
@@ -731,7 +610,7 @@ common_in_w_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
     scale_fill_manual(values = legend_colors) + theme(legend.position = "none", 
                                                   axis.text.x = element_blank(),
                                                   axis.ticks.x = element_blank()) + 
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   plot2 <- ggplot(df2_common, aes(x = reorder(Species, Average_Height), 
                                   y = Average_Height, fill = Species)) + 
     geom_col(position="dodge") + geom_errorbar(aes(ymin = Average_Height - SE, 
@@ -742,7 +621,7 @@ common_in_w_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
                                                   axis.text.x = element_blank(),
                                                   axis.ticks.x = element_blank(),
                                                   axis.title.y = element_blank()) +
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   plot3 <- ggplot(df3_common, aes(x = reorder(Species, Average_Height), 
                                   y = Average_Height, fill = Species)) + 
     geom_col(position="dodge") + geom_errorbar(aes(ymin = Average_Height - SE, 
@@ -752,7 +631,7 @@ common_in_w_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
     scale_fill_manual(values = legend_colors) + theme(axis.text.x = element_blank(),
                                                   axis.ticks.x = element_blank(),
                                                   axis.title.y = element_blank()) + 
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   
   
   plot4 <- (plot1 + plot2 + plot3) + plot_annotation(tag_levels = "A") & 
@@ -809,7 +688,7 @@ outside_brow_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
                                       x = glue("{title1}"), y = "Percent Browse") + 
     scale_color_manual(values = legend_colors) + theme(axis.text.x = element_blank(),
                                                   axis.ticks.x = element_blank()) + 
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   plotB <- ggplot((filtered_df2), aes(x = reorder(Species, -Percent_Browse),
                       y = Percent_Browse, color = Species)) + 
     geom_col(position="dodge", stat = "identity", fill = "white", 
@@ -817,7 +696,7 @@ outside_brow_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
     scale_color_manual(values = legend_colors) + theme(axis.text.x = element_blank(),
                                                   axis.ticks.x = element_blank(),
                                                   axis.title.y = element_blank()) +
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   plotC <- ggplot((filtered_df3), aes(x = reorder(Species, -Percent_Browse), 
                                        y = Percent_Browse, color = Species)) + 
   geom_col(position="dodge", stat = "identity", fill = "white", 
@@ -825,7 +704,8 @@ outside_brow_fig <- function(df1_east, df1_west, df2_east, df2_west, df3_east,
   scale_color_manual(values = legend_colors) + theme(axis.text.x = 
                                                        element_blank(), 
                                                 axis.ticks.x = element_blank(), 
-          axis.title.y = element_blank()) + coord_cartesian(ylim = c(0, 100))
+          axis.title.y = element_blank()) + coord_cartesian(ylim = c(0, 100)) +
+    theme(text = element_text(size = 12))
   
 
   
@@ -898,7 +778,7 @@ combined_avg_heights_fig <- function(df_east, df_west){
                           x = "Inside Transects", y = "Average Height (cm)") + 
     scale_fill_manual(values = legend_colors) + theme(legend.position = "none") + 
     scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   plot2 <- ggplot((outside_heights %>% filter(Browse == 1)), aes(x = 
                                                     reorder(Species, AvgHeight),
                                                                  y = AvgHeight, 
@@ -910,7 +790,7 @@ combined_avg_heights_fig <- function(df_east, df_west){
     labs(x = "Outside Transects - Browsed") + 
     scale_color_manual(values = legend_colors) + theme(legend.position = "none",
                                                   axis.title.y = element_blank()) +
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   plot3 <- ggplot((outside_heights %>% filter(Browse == 0)), aes(x = 
                                                       reorder(Species, AvgHeight), 
                                                                  y = AvgHeight, 
@@ -922,7 +802,7 @@ combined_avg_heights_fig <- function(df_east, df_west){
     labs(x = "Outside Transects - Unbrowsed") + 
     scale_color_manual(values = legend_colors) + theme(legend.position = "none",
                                                   axis.title.y = element_blank()) + 
-    coord_cartesian(ylim = c(0, 100))
+    coord_cartesian(ylim = c(0, 100)) + theme(text = element_text(size = 12))
   
   plot4 <- (plot1 + plot2 + plot3) + plot_annotation(tag_levels = "A") & 
     theme(plot.tag = element_text(size = 12, face = "bold"), 
